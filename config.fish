@@ -15,7 +15,7 @@ if type "qtile" >> /dev/null 2>&1
    set -x QT_QPA_PLATFORMTHEME "qt5ct"
 end
 
-# Set settings for [https://github.com/franciscolourenco/done](https://github.com/franciscolourenco/done)
+# Set settings for https://github.com/franciscolourenco/done
 set -U __done_min_cmd_duration 10000
 set -U __done_notification_urgency_level low
 
@@ -52,7 +52,7 @@ source /usr/share/doc/find-the-command/ftc.fish
 
 
 ## Functions
-# Functions needed for !! and !$ [https://github.com/oh-my-fish/plugin-bang-bang](https://github.com/oh-my-fish/plugin-bang-bang)
+# Functions needed for !! and !$ https://github.com/oh-my-fish/plugin-bang-bang
 function __history_previous_command
   switch (commandline -t)
   case "!"
@@ -93,8 +93,8 @@ end
 function copy
     set count (count $argv | tr -d \n)
     if test "$count" = 2; and test -d "$argv[1]"
-	set from (echo $argv[1] | string trim --right --chars=/)
-	set to (echo $argv[2])
+    set from (echo $argv[1] | string trim --right --chars=/)
+    set to (echo $argv[2])
         command cp -r $from $to
     else
         command cp $argv
@@ -166,6 +166,161 @@ function play_sound --argument sound_name
         end
         disown
     end
+end
+
+# -----------------------------------------------------
+# MUSIC LOOPING LOGIC
+# -----------------------------------------------------
+set -g _music_loop_pid ""
+
+function start_music_loop --argument sound_name
+    set sound_file "/home/valkyrie-sys/Tools/terminal-sounds/$sound_name.mp3"
+
+    if test -f "$sound_file"
+        set ffplay_volume $VALKYRIE_SOUND_VOLUME
+        set paplay_volume (math $VALKYRIE_SOUND_VOLUME \* 655.36)
+
+        if type -q ffplay
+            # ffplay native loop
+            ffplay -nodisp -autoexit -loop 0 -volume $ffplay_volume -loglevel quiet "$sound_file" >/dev/null 2>&1 &
+            set -g _music_loop_pid $last_pid
+        else if type -q mpv
+            # mpv native loop
+            mpv --no-video --loop --volume=$VALKYRIE_SOUND_VOLUME --no-terminal --no-msg-color "$sound_file" >/dev/null 2>&1 &
+            set -g _music_loop_pid $last_pid
+        else if type -q paplay
+            # paplay manual loop in background fish process
+            fish -c "while true; paplay --volume=$paplay_volume --device=@DEFAULT_SINK@ \"$sound_file\"; end" >/dev/null 2>&1 &
+            set -g _music_loop_pid $last_pid
+        end
+    end
+end
+
+function stop_music_loop
+    if test -n "$_music_loop_pid"
+        kill $_music_loop_pid 2>/dev/null
+        set -g _music_loop_pid ""
+    end
+end
+
+## LIVE TYPING DETECTOR
+function __detect_command_sounds
+    set -l current_line (commandline -b | string trim)
+    set -l current_time (date +%s%N | string sub -l 13)
+    set -l time_diff (math "$current_time - $__last_sound_trigger_time")
+    set -l triggered_pattern ""
+
+    # Existing Triggers
+    if string match -qr '(^|\s)pls\s+fuckoff$' -- "$current_line"
+        set triggered_pattern "pls fuckoff"
+        if test "$triggered_pattern" != "$__last_sound_trigger_pattern" -o $time_diff -gt 2000
+            play_sound "pls"; sleep 0.4; play_sound "fahhhhhhhhhhhhhhh"
+        end
+    else if string match -qr '(^|\s)pls\s+:P$' -- "$current_line"
+        set triggered_pattern "pls :P"
+        if test "$triggered_pattern" != "$__last_sound_trigger_pattern" -o $time_diff -gt 2000
+            play_sound "pls"; sleep 0.4; for i in (seq 4); play_sound "lizard-button"; sleep 0.3; end
+        end
+    else if string match -qr '(^|\s)fuckoff$' -- "$current_line"
+        set triggered_pattern "fuckoff"
+        if test "$triggered_pattern" != "$__last_sound_trigger_pattern" -o $time_diff -gt 2000
+            play_sound "fahhhhhhhhhhhhhhh"
+        end
+    else if string match -qr '(^|\s):P$' -- "$current_line"
+        set triggered_pattern ":P"
+        if test "$triggered_pattern" != "$__last_sound_trigger_pattern" -o $time_diff -gt 2000
+            for i in (seq 4); play_sound "lizard-button"; sleep 0.3; end
+        end
+    else if string match -qr '(^|\s)pls$' -- "$current_line"
+        set triggered_pattern "pls"
+        if test "$triggered_pattern" != "$__last_sound_trigger_pattern" -o $time_diff -gt 2000
+            play_sound "pls"
+        end
+
+    # NEW Triggers for custom commands
+    else if string match -qr '(^|\s)smash$' -- "$current_line"
+        set triggered_pattern "smash"
+        if test "$triggered_pattern" != "$__last_sound_trigger_pattern" -o $time_diff -gt 2000
+            play_sound "smaaaash"
+        end
+    else if string match -qr '(^|\s)mine$' -- "$current_line"
+        set triggered_pattern "mine"
+        if test "$triggered_pattern" != "$__last_sound_trigger_pattern" -o $time_diff -gt 2000
+            play_sound "mine-mine-mine"
+        end
+    else if string match -qr '(^|\s)plsgo$' -- "$current_line"
+        set triggered_pattern "plsgo"
+        if test "$triggered_pattern" != "$__last_sound_trigger_pattern" -o $time_diff -gt 2000
+            play_sound "ack"
+        end
+    else if string match -qr '(^|\s)flex$' -- "$current_line"
+        set triggered_pattern "flex"
+        if test "$triggered_pattern" != "$__last_sound_trigger_pattern" -o $time_diff -gt 2000
+            play_sound "can-you-feel-my-heart"
+        end
+
+    # NEW Triggers for :3, :33, :333 and q-q
+    else if string match -qr '(^|\s):333$' -- "$current_line"
+        set triggered_pattern ":333"
+        if test "$triggered_pattern" != "$__last_sound_trigger_pattern" -o $time_diff -gt 2000
+            play_sound "cute-uwu"
+        end
+    else if string match -qr '(^|\s):33$' -- "$current_line"
+        set triggered_pattern ":33"
+        if test "$triggered_pattern" != "$__last_sound_trigger_pattern" -o $time_diff -gt 2000
+            play_sound "cute-uwu"
+        end
+    else if string match -qr '(^|\s):3$' -- "$current_line"
+        set triggered_pattern ":3"
+        if test "$triggered_pattern" != "$__last_sound_trigger_pattern" -o $time_diff -gt 2000
+            play_sound "cute-uwu"
+        end
+    else if string match -qr '(^|\s)q-q$' -- "$current_line"
+        set triggered_pattern "q-q"
+        if test "$triggered_pattern" != "$__last_sound_trigger_pattern" -o $time_diff -gt 2000
+            play_sound "lacrimosa"
+        end
+
+    # NEW Triggers for touch-grass and gotta-go-fast
+    else if string match -qr '(^|\s)touch-grass$' -- "$current_line"
+        set triggered_pattern "touch-grass"
+        if test "$triggered_pattern" != "$__last_sound_trigger_pattern" -o $time_diff -gt 2000
+            play_sound "metal-pipe-falling"
+        end
+    else if string match -qr '(^|\s)gotta-go-fast$' -- "$current_line"
+        set triggered_pattern "gotta-go-fast"
+        if test "$triggered_pattern" != "$__last_sound_trigger_pattern" -o $time_diff -gt 2000
+            play_sound "sonic-x-theme"
+        end
+    end
+
+    if test -n "$triggered_pattern"
+        set -g __last_sound_trigger_time $current_time
+        set -g __last_sound_trigger_pattern "$triggered_pattern"
+    end
+end
+
+function __bind_with_sound_check -a key
+    bind $key "commandline -i '$key'; __detect_command_sounds"
+end
+
+# Core Bindings
+if status --is-interactive
+    # Live sound triggers
+    __bind_with_sound_check 'f' # fuckoff
+    __bind_with_sound_check 'P' # :P
+    __bind_with_sound_check 's' # pls / smash
+    __bind_with_sound_check ' ' # space triggers all
+    __bind_with_sound_check 'h' # smash, touch
+    __bind_with_sound_check 'e' # mine
+    __bind_with_sound_check 'o' # plsgo
+    __bind_with_sound_check 'x' # flex
+    __bind_with_sound_check 't' # fast, touch
+
+    # New Bindings for :3 family and q-q
+    __bind_with_sound_check '3' # :3, :33, :333
+    __bind_with_sound_check 'q' # q-q
+    __bind_with_sound_check '-' # q-q
 end
 
 # Y/N sounds: wrappers + keybinds (replaces broken hooks)
@@ -262,7 +417,6 @@ end
 ## Useful aliases
 
 # Replace ls with eza
-alias ls 'eza -al --color=always --group-directories-first --icons' # preferred listing
 alias la 'eza -a --color=always --group-directories-first --icons'  # all files and dirs
 alias ll 'eza -l --color=always --group-directories-first --icons'  # long format
 alias lt 'eza -aT --color=always --group-directories-first --icons' # tree listing
@@ -276,8 +430,6 @@ end
 
 #Cachy-update (all)
 alias lets-go-gambling 'lets_go_gambling'
-#cd
-alias plsgo 'cd'
 
 # Common use
 alias .. 'cd ..'
@@ -285,15 +437,14 @@ alias ... 'cd ../..'
 alias .... 'cd ../../..'
 alias ..... 'cd ../../../..'
 alias ...... 'cd ../../../../..'
-alias big 'expac -H M "%m\t%n" | sort -h | nl'     # Sort installed packages according to size in MB (expac must be installed)
+alias big 'expac -H M "%m\t%n" | sort -h | nl'      # Sort installed packages according to size in MB (expac must be installed)
 alias dir 'dir --color=auto'
-alias fixpacman 'sudo rm /var/lib/pacman/db.lck'
 alias gitpkg 'pacman -Q | grep -i "\-git" | wc -l' # List amount of -git packages
 alias grep 'ugrep --color=auto'
 alias egrep 'ugrep -E --color=auto'
 alias fgrep 'ugrep -F --color=auto'
 alias grubup 'sudo update-grub'
-alias hw 'hwinfo --short'                          # Hardware Info
+alias hw 'hwinfo --short'                       # Hardware Info
 alias ip 'ip -color'
 alias psmem 'ps auxf | sort -nr -k 4'
 alias psmem10 'ps auxf | sort -nr -k 4 | head -10'
@@ -333,6 +484,88 @@ if status --is-interactive
     play_sound "oo-ee-ee-aa" &
 end
 
+# -----------------------------------------------------
+# CUSTOM COMMANDS (With Live Sound & Expect Wrapper)
+# -----------------------------------------------------
+
+# flex (hyfetch + hwinfo) with interactive sounds
+function flex
+    set -l current_time (date +%s%N | string sub -l 13)
+    if test (math "$current_time - $__last_sound_trigger_time") -gt 3000
+        play_sound "can-you-feel-my-heart"
+    end
+
+    if status --is-interactive && type -q hyfetch
+        with-sounds hyfetch
+        with-sounds hwinfo $arg --short
+    end
+end
+
+# mine (eza/ls) with interactive sounds
+function mine --description "Play 'mine-mine-mine' then eza (ls)"
+    set -l current_time (date +%s%N | string sub -l 13)
+    if test (math "$current_time - $__last_sound_trigger_time") -gt 3000
+        play_sound "mine-mine-mine"
+    end
+    with-sounds eza $argv -al --color=always --group-directories-first --icons
+end
+
+# smash (rm -rf) with interactive sounds
+function smash --description "Play 'smaaaash' then rm -rf"
+    set -l current_time (date +%s%N | string sub -l 13)
+    if test (math "$current_time - $__last_sound_trigger_time") -gt 3000
+        play_sound "smaaaash"
+    end
+    # DANGER: 'with-sounds' enables dog-clicker (y) and vine-boom (n)
+    with-sounds rm -rf $argv
+end
+
+# plsgo (cd + clear + eza)
+# Note: 'cd' cannot be wrapped in with-sounds (it's a shell builtin)
+# We only wrap the eza part.
+function plsgo
+    set -l current_time (date +%s%N | string sub -l 13)
+    if test (math "$current_time - $__last_sound_trigger_time") -gt 3000
+        play_sound "ack"
+    end
+
+    if test (count $argv) -eq 0
+        cd ~
+    else
+        cd $argv
+    end
+    clear
+    with-sounds eza -al --color=always --group-directories-first --icons
+end
+
+# gotta-go-fast (mirror refresh with sonic theme)
+function gotta-go-fast
+    # Start loop for long operations
+    start_music_loop "sonic-x-theme"
+    trap "stop_music_loop" EXIT INT TERM
+
+    echo "Gotta go fast! Finding fastest mirrors... 🦔💨"
+    # Use standard reflector flags from the 'mirror' alias
+    sudo reflector -f 30 -l 30 --number 10 --verbose --save /etc/pacman.d/mirrorlist
+
+    stop_music_loop
+    trap - EXIT INT TERM
+    play_sound "haha-ha-one"
+end
+
+# touch-grass (exit with metal pipe)
+# Note: Flag used to prevent double playing with on_terminal_exit
+set -g _touch_grass_active 0
+function touch-grass
+    set -g _touch_grass_active 1
+    # Live sound handled by detector, but play here if detector missed it
+    set -l current_time (date +%s%N | string sub -l 13)
+    if test (math "$current_time - $__last_sound_trigger_time") -gt 3000
+        play_sound "metal-pipe-falling"
+    end
+    exit
+end
+
 #Help for all packages / show all commands
 function iforgor --argument cmd
     # Play sound once at the start
@@ -350,58 +583,99 @@ function iforgor --argument cmd
             play_sound "no-i-forgot"
         end
         echo "╔══════════════════════════════════════════════════════════════╗"
-        echo "║           Valkyrie Terminal Commands Reference               ║"
+        echo "║            Valkyrie Terminal Commands Reference              ║"
         echo "╚══════════════════════════════════════════════════════════════╝"
         echo ""
         echo "📦 PACKAGE MANAGEMENT"
-        echo "  :3 <pkg>           → Install with cute-uwu.mp3"
-        echo "  :3 <pkg> q-q       → Uninstall with lacrimosa.mp3"
-        echo "  pls :3 <pkg>       → Sudo install (pls.mp3 + cute-uwu.mp3)"
-        echo "  pls :3 <pkg> q-q   → Sudo uninstall (pls.mp3 + lacrimosa.mp3)"
-        echo "  yeet               → Clean cache (interactive with sounds)"
-        echo "  pls-its-broken     → Fix pacman db lock with its-broken.mp3"
-        echo "  seek               → Launch pacseek with start-pacman.mp3"
+        echo "  :3 <pkg>            → Install (-S) with cute-uwu.mp3"
+        echo "  :33 <pkg>           → Sync+Install (-Sy) (cute-uwu x2)"
+        echo "  :333 <pkg>          → Update+Install (-Syu) (cute-uwu x3)"
+        echo "  :3 <pkg> q-q        → Uninstall with lacrimosa.mp3"
+        echo "  pls :3 <pkg>        → Sudo install (pls.mp3 + cute-uwu.mp3)"
+        echo "  yeet                → Clean cache (interactive with sounds)"
+        echo "  pls-its-broken      → Fix pacman db lock with its-broken.mp3"
+        echo "  seek                → Launch pacseek with start-pacman.mp3"
+        echo "  lets-go-gambling    → Update all with gambling sounds"
+        echo ""
+        echo "📂 NAVIGATION & FLEX"
+        echo "  plsgo <dir>         → cd + clear + ls (ack.mp3)"
+        echo "  mine <file>         → List files (mine-mine-mine.mp3)"
+        echo "  smash <file>        → Delete (rm -rf) (smaaaash.mp3)"
+        echo "  flex                → Show sys info (can-you-feel-my-heart.mp3)"
+        echo "  gotta-go-fast       → Update mirrors (sonic-x-theme.mp3)"
+        echo "  touch-grass         → Exit terminal (metal-pipe-falling.mp3)"
         echo ""
         echo "🔧 SYSTEM COMMANDS"
-        echo "  fuckoff            → Shutdown with fahhhhhhhhhhhhhhh.mp3"
-        echo "  :P                 → Restart with lizard-button.mp3 (4x)"
-        echo "  lets-go-gambling   → Update all with gambling sounds"
+        echo "  fuckoff             → Shutdown with fahhhhhhhhhhhhhhh.mp3"
+        echo "  :P                  → Restart with lizard-button.mp3 (4x)"
         echo ""
         echo "🎛️  UTILITY"
-        echo "  pls <cmd>          → Sudo + pls.mp3"
-        echo "  pls <cmd> iforgor  → Show sudo help + no-i-forgot.mp3"
-        echo "  iforgor <cmd>      → Show command help + no-i-forgot.mp3"
+        echo "  pls <cmd>           → Sudo + pls.mp3"
+        echo "  pls <cmd> iforgor   → Show sudo help + no-i-forgot.mp3"
+        echo "  iforgor <cmd>       → Show command help + no-i-forgot.mp3"
         echo "  sound-volume <0-100> → Adjust all sound volumes"
-        echo "  with-sounds <cmd>  → Run any interactive command with y/n sounds"
-        echo "  iforgor help       → Show this menu + no-i-forgot.mp3"
+        echo "  with-sounds <cmd>   → Run any interactive command with y/n sounds"
+        echo "  iforgor help        → Show this menu + no-i-forgot.mp3"
         echo ""
         echo "🔊 SOUNDS & KEYBINDS"
-        echo "  Terminal Start     → oo-ee-ee-aa.mp3"
-        echo "  Update Success     → lets-go-gambling-win.mp3"
-        echo "  Update Failure     → aw-dang-it.mp3"
-        echo "  Help/Iforgor       → no-i-forgot.mp3"
-        echo "  Ctrl+Y             → Append '| yes' + dog-clicker"
-        echo "  Ctrl+N             → Append '&& no' + vine-boom"
-        echo "  Ctrl+B             → Play vine-boom + type 'n'"
-        echo "  Current Volume     → $VALKYRIE_SOUND_VOLUME%"
+        echo "  Terminal Start      → oo-ee-ee-aa.mp3"
+        echo "  Update Success      → lets-go-gambling-win.mp3"
+        echo "  Update Failure      → aw-dang-it.mp3"
+        echo "  Help/Iforgor        → no-i-forgot.mp3"
+        echo "  Ctrl+Y              → Append '| yes' + dog-clicker"
+        echo "  Ctrl+N              → Append '&& no' + vine-boom"
+        echo "  Ctrl+B              → Play vine-boom + type 'n'"
+        echo "  Current Volume      → $VALKYRIE_SOUND_VOLUME%"
         echo ""
         return 0
     end
 
     # Show help for specific custom commands
     switch "$cmd"
+        case "plsgo"
+            play_sound "no-i-forgot"
+            echo "Navigate & List (plsgo)"
+            echo "SOUND: ack.mp3"
+            return 0
+        case "mine"
+            play_sound "no-i-forgot"
+            echo "Claim Ownership (mine)"
+            echo "SOUND: mine-mine-mine.mp3"
+            return 0
+        case "smash"
+            play_sound "no-i-forgot"
+            echo "Smash Files (smash)"
+            echo "Usage: smash <file/folder>"
+            echo "SOUND: smaaaash.mp3"
+            return 0
+        case "flex"
+            play_sound "no-i-forgot"
+            echo "System Flex (flex)"
+            echo "SOUND: can-you-feel-my-heart.mp3"
+            return 0
+        case "touch-grass"
+            play_sound "no-i-forgot"
+            echo "Exit Terminal (touch-grass)"
+            echo "SOUND: metal-pipe-falling.mp3"
+            return 0
+        case "gotta-go-fast"
+            play_sound "no-i-forgot"
+            echo "Update Mirrors (gotta-go-fast)"
+            echo "SOUND: sonic-x-theme.mp3 + haha-ha-one.mp3"
+            return 0
         case ":3"
             play_sound "no-i-forgot"
             echo "Install/Uninstall Packages (:3)"
             echo ""
             echo "USAGE:"
-            echo "  :3 <package>       # Install package :3~"
-            echo "  :3 <package> q-q   # Uninstall package q-q~"
-            echo "  pls :3 <package>       # Sudo install (pls.mp3 + cute-uwu.mp3)"
-            echo "  pls :3 <package> q-q   # Sudo uninstall (pls.mp3 + lacrimosa.mp3)"
+            echo "  :3 <package>        # Install (-S) :3~"
+            echo "  :33 <package>       # Sync+Install (-Sy) :33~"
+            echo "  :333 <package>      # Update+Install (-Syu) :333~"
+            echo "  :3 <package> q-q    # Uninstall package q-q~"
             echo ""
             echo "SOUNDS:"
-            echo "  Install  → cute-uwu.mp3"
+            echo "  Install  → cute-uwu.mp3 + earthbound-what-battle-moment (during) (loops)"
+            echo "  Success  → earthbound-you-win.mp3"
             echo "  Uninstall → lacrimosa.mp3 (plays to completion)"
             echo "  Via pls  → pls.mp3 + one of above"
             echo "  Volume   → $VALKYRIE_SOUND_VOLUME% (adjust with sound-volume)"
@@ -518,7 +792,7 @@ function iforgor --argument cmd
             echo "    • flatpak (flatpak update)"
             echo ""
             echo "SOUNDS:"
-            echo "  Start        → lets-go-gambling.mp3"
+            echo "  Start        → lets-go-gambling.mp3 + earthbound-what-battle-moment (loop)"
             echo "  All succeed  → lets-go-gambling-win.mp3"
             echo "  Any fail     → aw-dang-it.mp3"
             echo "  Volume       → $VALKYRIE_SOUND_VOLUME%"
@@ -594,7 +868,10 @@ function pls
         set argv $argv --help
     end
 
-    play_sound "pls"
+    set -l current_time (date +%s%N | string sub -l 13)
+    if test (math "$current_time - $__last_sound_trigger_time") -gt 3000
+        play_sound "pls"
+    end
 
     # Special handling for :3 - call directly without sudo
     # (yay/pacman handle their own privilege escalation)
@@ -602,10 +879,24 @@ function pls
         set pkg $argv[2]
         set op $argv[3]
         :3 $pkg $op
+    else if test "$argv[1]" = ":33"
+        set pkg $argv[2]
+        :33 $pkg
+    else if test "$argv[1]" = ":333"
+        set pkg $argv[2]
+        :333 $pkg
     else if test "$argv[1]" = ":P"
         :P  # Run locally (sounds + sudo reboot inside)
     else if test "$argv[1]" = "fuckoff"
         fuckoff  # Run locally (sound + sudo shutdown inside)
+    else if test "$argv[1]" = "smash"
+        # Run sound locally (checked in function), then sudo rm
+        # smash is rm -rf.
+        play_sound "smaaaash"
+        sudo rm -rf $argv[2..-1]
+    else if test "$argv[1]" = "mine"
+        play_sound "mine-mine-mine"
+        sudo eza $argv[2..-1] -al --color=always --group-directories-first --icons
     else
         sudo fish -c "source /home/valkyrie-sys/.config/fish/config.fish; $argv"
     end
@@ -615,8 +906,8 @@ end
 function :3 --argument-names pkg op
     if test -z "$pkg"
         echo "Usage: :3 <package> [q-q]"
-        echo "  :3 firefox       # install :3"
-        echo "  :3 firefox q-q   # uninstall q-q"
+        echo "  :3 firefox        # install :3"
+        echo "  :3 firefox q-q    # uninstall q-q"
         return 1
     end
 
@@ -628,24 +919,129 @@ function :3 --argument-names pkg op
         sleep 2
         echo "Uninstalling $pkg q-q~"
         if type -q yay
-            auto_yes | yay -R "$pkg"
+            # Use --noconfirm for auto-yes without broken pipe
+            yay -R "$pkg" --noconfirm
         else
-            auto_yes | sudo pacman -R "$pkg"
+            sudo pacman -R "$pkg" --noconfirm
+        end
+        # Check exit status for q-q
+        set install_status $status
+        if test $install_status -ne 0
+            play_sound "aw-dang-it"
         end
     else
         echo "Installing $pkg :3~"
+
+        # Start music loop and trap cleanup
+        start_music_loop "earthbound-what-battle-moment"
+        trap "stop_music_loop" EXIT INT TERM
+
         if type -q yay
-            auto_yes | yay -S "$pkg"
+            yay -S "$pkg" --noconfirm
         else
-            auto_yes | sudo pacman -S "$pkg"
+            sudo pacman -S "$pkg" --noconfirm
         end
+
+        set install_status $status
+
+        # Stop music loop immediately
+        stop_music_loop
+        trap - EXIT INT TERM
+
+        if test $install_status -eq 0
+            play_sound "earthbound-you-win"
+        else
+            play_sound "aw-dang-it"
+        end
+    end
+end
+
+# :33 = -Sy (Sync+Install)
+function :33 --argument-names pkg
+    play_sound "cute-uwu"
+    sleep 0.2
+    play_sound "cute-uwu"
+
+    # Start music loop and trap cleanup
+    start_music_loop "earthbound-what-battle-moment"
+    trap "stop_music_loop" EXIT INT TERM
+
+    if test -z "$pkg"
+        if type -q yay
+            yay -Sy --noconfirm
+        else
+            sudo pacman -Sy --noconfirm
+        end
+    else
+        echo "Syncing and Installing $pkg :33~"
+        if type -q yay
+            yay -Sy "$pkg" --noconfirm
+        else
+            sudo pacman -Sy "$pkg" --noconfirm
+        end
+    end
+
+    set install_status $status
+
+    # Stop music loop
+    stop_music_loop
+    trap - EXIT INT TERM
+
+    if test $install_status -eq 0
+        play_sound "earthbound-you-win"
+    else
+        play_sound "aw-dang-it"
+    end
+end
+
+# :333 = -Syu (Update+Install)
+function :333 --argument-names pkg
+    play_sound "cute-uwu"
+    sleep 0.2
+    play_sound "cute-uwu"
+    sleep 0.2
+    play_sound "cute-uwu"
+
+    # Start music loop and trap cleanup
+    start_music_loop "earthbound-what-battle-moment"
+    trap "stop_music_loop" EXIT INT TERM
+
+    if test -z "$pkg"
+        # Just update
+        if type -q yay
+            yay -Syu --noconfirm
+        else
+            sudo pacman -Syu --noconfirm
+        end
+    else
+        echo "Updating and Installing $pkg :333~"
+        if type -q yay
+            yay -Syu "$pkg" --noconfirm
+        else
+            sudo pacman -Syu "$pkg" --noconfirm
+        end
+    end
+
+    set install_status $status
+
+    # Stop music loop
+    stop_music_loop
+    trap - EXIT INT TERM
+
+    if test $install_status -eq 0
+        play_sound "earthbound-you-win"
+    else
+        play_sound "aw-dang-it"
     end
 end
 
 #fuckoff with sound (full play + delayed sudo shutdown)
 function fuckoff
-    play_sound "fahhhhhhhhhhhhhhh"
-    sleep 4  # Adjust to sound length (test with `play_sound fahhhhhhhhhhhhhhh; sleep 5; echo DONE`)
+    set -l current_time (date +%s%N | string sub -l 13)
+    if test (math "$current_time - $__last_sound_trigger_time") -gt 3000
+        play_sound "fahhhhhhhhhhhhhhh"
+    end
+    sleep 4  # Adjust to sound length (test with `play_sound "fahhhhhhhhhhhhhhh"; sleep 5; echo DONE`)
     sudo shutdown -h now
 end
 
@@ -683,37 +1079,79 @@ end
 
 #:P with lizard-button 4 times (user sounds + sudo reboot)
 function :P
-    for i in (seq 4)
-        play_sound "lizard-button"
-        sleep 0.8
+    set -l current_time (date +%s%N | string sub -l 13)
+    if test (math "$current_time - $__last_sound_trigger_time") -gt 3000
+        for i in (seq 4)
+            play_sound "lizard-button"
+            sleep 0.8
+        end
     end
     sudo reboot
 end
 
 #based update with gambling meme sounds (volume-aware via play_sound)
 function lets_go_gambling
-    play_sound lets-go-gambling
+    play_sound "lets-go-gambling"
     echo "Let's go gambling! 🎰~"
     echo "Updating packages... wish us luck!"
 
+    # Start looping earthbound music while updating
+    start_music_loop "earthbound-what-battle-moment"
+    trap "stop_music_loop" EXIT INT TERM
+
     # Run updates and capture exit status
-    auto_yes | sudo pacman -Syu
+    # Uses native flags --noconfirm and -y instead of pipe to fix "n" issue
+    sudo pacman -Syu --noconfirm
     set pacman_status $status
 
-    auto_yes | yay -Syu
+    yay -Syu --noconfirm
     set yay_status $status
 
-    auto_yes | flatpak update
-    set flatpak_status $status
+    # Run flatpak, capture output to temp file while showing it
+    # We use a temp file to count occurrences later
+    set flatpak_log "/tmp/valkyrie_flatpak.log"
+    # We must capture pipe status to know if flatpak failed or tee failed
+    flatpak update -y | tee $flatpak_log
+    set pipe_status $pipestatus
+    set flatpak_status $pipe_status[1] # Exit code of flatpak
+
+    # Stop music loop (so we can hear the error counts clearly)
+    stop_music_loop
+    trap - EXIT INT TERM
+
+    # Count "end-of-life" occurrences
+    if test -f $flatpak_log
+        set eol_count (grep -c "end-of-life" $flatpak_log)
+        if test $eol_count -gt 0
+            echo "Oof! $eol_count End-of-Life warnings detected! 🎲"
+            for i in (seq $eol_count)
+                play_sound "aw-dang-it"
+                sleep 0.5
+            end
+        end
+        rm -f $flatpak_log
+    end
 
     # Check if ANY command failed
     if test $pacman_status -ne 0 -o $yay_status -ne 0 -o $flatpak_status -ne 0
         echo "Aw dang it! 😭"
-        play_sound aw-dang-it
+        play_sound "aw-dang-it"
         return 1
     end
 
     # Success!
     echo "Update complete! We won! 🎰"
-    play_sound lets-go-gambling-win
+    play_sound "lets-go-gambling-win"
+end
+
+## Exit Handler
+function on_terminal_exit --on-event fish_exit
+    # Only play if interactive to avoid sounds on background scripts
+    # And check the flag to ensure touch-grass doesn't play twice
+    if status --is-interactive
+        if test "$_touch_grass_active" != "1"
+            play_sound "metal-pipe-falling"
+            sleep 0.1
+        end
+    end
 end

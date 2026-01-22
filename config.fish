@@ -846,7 +846,7 @@ function iforgor --argument cmd --argument fast_mode
         # FAST MODE: Instant display with only "ohyes" at end
         if test "$fast_mode" = "now"
             echo "╔══════════════════════════════════════════════════════════════╗"
-            echo "║            Valkyrie Terminal Commands Reference              ║"
+            echo "║            S I L L Y  Terminal Commands Reference            ║"
             echo "╚══════════════════════════════════════════════════════════════╝"
             echo ""
             echo "📦 PACKAGE MANAGEMENT"
@@ -936,7 +936,7 @@ function iforgor --argument cmd --argument fast_mode
         echo ""
         __type_slowly "╔══════════════════════════════════════════════════════════════╗" 15 "$typing_sound"
         echo ""
-        __type_slowly "║            Valkyrie Terminal Commands Reference              ║" 15 "$typing_sound"
+        __type_slowly "║            S I L L Y  Terminal Commands Reference            ║" 15 "$typing_sound"
         echo ""
         __type_slowly "╚══════════════════════════════════════════════════════════════╝" 15 "$typing_sound"
         echo ""

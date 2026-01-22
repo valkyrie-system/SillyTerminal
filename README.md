@@ -42,7 +42,7 @@ This is a heavily customized **Fish shell configuration** that transforms your t
    mkdir -p ~/Tools/terminal-sounds
    ```
 
-4. **Add your MP3 sound files** (place in `~/Tools/terminal-sounds/`):
+4. **Add your MP3 sound files (extract provided zip)** (place in `~/Tools/terminal-sounds/`):
    - `dog-clicker.mp3` – Yes confirmation
    - `vine-boom.mp3` – No confirmation
    - `smaaaash.mp3` – Delete action

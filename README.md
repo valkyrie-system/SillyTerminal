@@ -426,6 +426,242 @@ iforgor plsgo     # Show help for specific command
 - No animation, instant lookup
 
 ---
+# Silly Terminal Config - Optimization TODOs
+
+## 🔴 HIGH PRIORITY - Critical Optimizations (600+ lines savings potential)
+
+### Phase 1: Sound Detector Refactor (-300 lines)
+- [ ] Create lookup table for command-to-sound mappings
+  - [ ] Define array structure: `set sound_triggers cmd1 sound1 cmd2 sound2 ...`
+  - [ ] Test with 10-20 commands first
+  - [ ] Verify pattern matching still works correctly
+- [ ] Replace 50+ `else if` blocks in `__detect_command_sounds` with loop
+  - [ ] Loop through sound_triggers array
+  - [ ] Match against current_line
+  - [ ] Call play_sound and set pattern variables
+- [ ] Validate all 50 commands still trigger sounds
+  - [ ] Manual testing: `:3`, `smash`, `mine`, `plsgo`, `flex`, etc.
+  - [ ] Verify timing guard still prevents double-triggers
+
+**Estimated savings**: 300 lines  
+**File affected**: config.fish  
+**Risk level**: Medium (core functionality)
+
+---
+
+### Phase 2: Timer Guard Helper (-200 lines)
+- [ ] Create `__play_sound_if_cooldown` helper function
+  - [ ] Parameters: sound_name, cooldown_ms (default 3000)
+  - [ ] Extract timer logic from existing functions
+  - [ ] Return success/failure for chaining
+- [ ] Refactor functions using timer guard:
+  - [ ] `nope` → `__play_sound_if_cooldown nope 3000 && cd ..`
+  - [ ] `backrooms` → `__play_sound_if_cooldown burning-memory 3000 && cd ../..`
+  - [ ] `smash`, `mine`, `plsgo`, `flex`, `gotta-go-fast`, `touch-grass`
+  - [ ] All other timer-guarded functions (25+ total)
+- [ ] Test each refactored function individually
+  - [ ] Verify cooldown prevents double-triggers
+  - [ ] Confirm sound plays only on first call within window
+
+**Estimated savings**: 200 lines  
+**File affected**: config.fish  
+**Risk level**: Low (isolated changes)
+
+---
+
+### Phase 3: Player Detection Caching (-subprocess overhead)
+- [ ] Move player detection to startup (before any functions)
+  ```fish
+  # At top of config
+  if type -q ffplay
+      set -gx VALKYRIE_SOUND_PLAYER ffplay
+  else if type -q paplay
+      set -gx VALKYRIE_SOUND_PLAYER paplay
+  else if type -q mpv
+      set -gx VALKYRIE_SOUND_PLAYER mpv
+  end
+  ```
+- [ ] Update `play_sound()` to use $VALKYRIE_SOUND_PLAYER
+  - [ ] Replace `if type -q ffplay` with switch statement
+  - [ ] Remove 50+ redundant `type -q` calls
+- [ ] Update `start_music_loop()` to use cached player
+- [ ] Test each player type:
+  - [ ] Works with ffplay installed
+  - [ ] Falls back gracefully if only paplay available
+  - [ ] Works with mpv as final fallback
+
+**Estimated savings**: Process overhead reduction (not line count)  
+**File affected**: config.fish  
+**Risk level**: Low (performance optimization)
+
+---
+
+## 🟡 MEDIUM PRIORITY - Code Quality Improvements
+
+### Phase 4: Iforgor Function Refactor (-complexity)
+- [ ] Extract `iforgor` animated display logic into separate function
+  - [ ] Create `__iforgor_animated_help` function
+  - [ ] Move all `__type_slowly` calls there
+  - [ ] Move voice selection logic there
+- [ ] Extract `iforgor` fast display into separate function
+  - [ ] Create `__iforgor_fast_help` function
+  - [ ] Move all instant echo statements there
+- [ ] Simplify main `iforgor` function to dispatcher:
+  ```fish
+  if test "$fast_mode" = "now"
+      __iforgor_fast_help
+  else
+      __iforgor_animated_help
+  end
+  ```
+- [ ] Test both modes:
+  - [ ] `iforgor help` (animated)
+  - [ ] `iforgor help now` (instant)
+  - [ ] No args → plays sound and shows help
+
+**Estimated savings**: 100 lines of cleaner, more maintainable code  
+**File affected**: config.fish  
+**Risk level**: Low (already working)
+
+---
+
+### Phase 5: Expect Script Documentation
+- [ ] Add comment block explaining expect script pattern:
+  ```fish
+  # ========================================
+  # EXPECT SCRIPT PATTERN EXPLANATION
+  # ========================================
+  # We use embedded expect scripts for interactive prompts
+  # because Fish doesn't have native read/confirmation hooks.
+  # 
+  # Pattern: printf to /tmp/scriptname.exp, chmod +x, run, cleanup
+  # Rationale: Allows sound playback on user input (y/n)
+  # 
+  # Why separate scripts vs. helper?
+  # - Each use case (with-sounds, smash, etc.) needs different logic
+  # - Keeping inline improves readability for complex logic
+  # - Trade-off: 3 similar blocks vs. 1 abstract helper
+  # ========================================
+  ```
+- [ ] Verify security assumptions:
+  - [ ] Document that $cmd_str is only internal commands
+  - [ ] Confirm no user input injection risks
+- [ ] Add note about Fish version compatibility
+
+**File affected**: config.fish (documentation only)  
+**Risk level**: None (comments)
+
+---
+
+## 🟢 LOW PRIORITY - Nice-to-Have Improvements
+
+### Phase 6: Test Suite Creation
+- [ ] Create `tests/` directory
+- [ ] Create test script for each command category:
+  - [ ] `test_package_management.fish` (`:3`, `:33`, `:333`, `:3 q-q`)
+  - [ ] `test_navigation.fish` (`nope`, `backrooms`, `plsgo`, `mine`)
+  - [ ] `test_system_info.fish` (`flex`, `vitas`, `trololo`, `numba-nine`)
+  - [ ] `test_sounds.fish` (verify all 50+ trigger sounds play)
+  - [ ] `test_iforgor.fish` (both modes)
+  - [ ] `test_volume_control.fish` (`sound-volume` command)
+
+**File affected**: New tests/ directory  
+**Risk level**: None (documentation)
+
+---
+
+### Phase 7: Performance Profiling
+- [ ] Measure startup time before optimizations
+  ```bash
+  time source ~/.config/fish/config.fish
+  ```
+- [ ] Measure after each phase
+- [ ] Measure keystroke latency with profiler
+- [ ] Document baseline vs. optimized timing
+
+**Tools**: Fish built-in `time`, optionally `hyperfine`
+
+---
+
+### Phase 8: README Updates
+- [ ] Update installation docs with new player caching note
+- [ ] Add performance section documenting optimizations
+- [ ] Add test instructions
+- [ ] Update troubleshooting with common optimization issues
+
+**File affected**: README.md
+
+---
+
+## 📋 Testing Checklist (Run After Each Phase)
+
+- [ ] Sound playback works (test each 50 commands triggers sound)
+- [ ] Live typing detection works (type `:3`, `smash`, `flex`, etc.)
+- [ ] Package management (`:3 firefox`, `:33 pkg`, `:333 update+install`)
+- [ ] Navigation (`nope`, `backrooms`, `plsgo ~/Desktop`)
+- [ ] System info (`flex`, `vitas`, `trololo`, `numba-nine`)
+- [ ] `iforgor` help (both animated and `iforgor help now`)
+- [ ] `with-sounds` wrapper with y/n prompts
+- [ ] Music loops (start/stop cleanly with `gotta-go-fast`)
+- [ ] Volume control (`sound-volume 50`, `sound-volume --show`)
+- [ ] Config reload (`source ~/.config/fish/config.fish`)
+- [ ] No error messages on startup
+- [ ] All 50+ meme sounds play correctly
+
+---
+
+## 🎯 Completion Criteria
+
+- [ ] Achieve 600+ lines reduction (from ~2000 to ~1400)
+- [ ] All 50+ commands still trigger sounds perfectly
+- [ ] No new bugs introduced
+- [ ] Code more maintainable/readable
+- [ ] Performance equivalent or better
+- [ ] All tests pass
+- [ ] Documentation updated
+- [ ] README reflects optimizations
+
+---
+
+## 📊 Progress Tracking
+
+| Phase | Task | Lines Saved | Status | PR |
+|-------|------|-------------|--------|-----|
+| 1 | Sound detector refactor | 300 | ⬜ TODO | — |
+| 2 | Timer guard helper | 200 | ⬜ TODO | — |
+| 3 | Player caching | Overhead reduction | ⬜ TODO | — |
+| 4 | Iforgor refactor | 100 | ⬜ TODO | — |
+| 5 | Expect docs | Documentation | ⬜ TODO | — |
+| 6 | Test suite | N/A (tests) | ⬜ TODO | — |
+| 7 | Performance profile | N/A (analysis) | ⬜ TODO | — |
+| 8 | README updates | N/A (docs) | ⬜ TODO | — |
+| **TOTAL** | **All phases** | **600+ lines** | **⬜ TODO** | **TBD** |
+
+---
+
+## 🔗 Related Issues
+
+- None yet - create GitHub issues for:
+  - Performance regression testing
+  - Keybind collision detection
+  - Sound file availability checks
+
+---
+
+## 📝 Notes
+
+- **Valkyrie System**: Estimate 2-3 hours for all phases if doing sequentially
+- **Risk mitigation**: Test after each phase, commit frequently
+- **Backward compatibility**: No breaking changes to user-facing commands
+- **Future work**: Consider moving to separate module files (aliases.fish, functions.fish, etc.)
+
+---
+
+**Last Updated**: January 21, 2026  
+**Status**: Planning Phase  
+**Next Step**: Phase 1 - Sound Detector Refactor
+
+---
 
 ## 🐛 Troubleshooting
 
@@ -570,6 +806,7 @@ end
 - **Fish Shell:** https://fishshell.com
 - **Undertale:** Toby Fox
 - **Earthbound:** Nintendo/Ape Inc.
+- **Sonic The Headgehog:** SEGA
 - **wttr.in:** https://wttr.in/ (weather service)
 - **Meme sounds:** Various internet culture references
 - **Original inspiration:** Chaotic terminal ricing culture

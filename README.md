@@ -650,7 +650,7 @@ iforgor plsgo     # Show help for specific command
 
 ## 📝 Notes
 
-- **Valkyrie System**: Estimate 2-3 hours for all phases if doing sequentially
+- **Valkyrie System Estimate 2-3 hours or a couple weeks since Uni is starting up again for all phases if doing sequentially**
 - **Risk mitigation**: Test after each phase, commit frequently
 - **Backward compatibility**: No breaking changes to user-facing commands
 - **Future work**: Consider moving to separate module files (aliases.fish, functions.fish, etc.)

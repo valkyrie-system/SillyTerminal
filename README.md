@@ -1,4 +1,4 @@
-# 🎮 Valkyrie Terminal: Meme-Powered Fish Shell Config
+# 🎮 Silly Terminal: Meme-Powered Fish Shell Config
 
 > A chaotic, fun Fish shell configuration for Arch Linux with gamified commands, interactive sound effects, and themed aliases. Built for maximum terminal chaos and fun.
 
